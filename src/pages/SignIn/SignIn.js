@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useObserver } from 'mobx-react';
 import { Form, Formik } from 'formik';
 import * as Yup from 'yup';
 import Collapse from '@material-ui/core/Collapse';
@@ -28,20 +29,13 @@ const validationSchema = Yup.object().shape({
 
 export default props => {
   const { navigate } = props;
-  const { store: { user } } = useStore();
-  const [signInError, setSignInError] = useState(false);
+  const { store, store: { user } } = useStore();
   const classes = useStyles();
 
   const signIn = async ({ email, password }, actions) => {
-    try {
-      await user.signIn(email, password);
-      if (user.signedIn) {
-        setSignInError(false);
-        await navigate('/app/dashboard', { replace: true });
-      }
-    } catch (error) {
-      console.error(error);
-      setSignInError(true);
+    await user.signIn(email, password);
+    if (!store.error) {
+      await navigate('/app/dashboard', { replace: true });
     }
   };
 
@@ -50,61 +44,67 @@ export default props => {
     await navigate('/app/signup');
   };
 
-  return (
-      <main className={classes.main}>
-        <div className={classes.pageTitle}>
-          <LocationCityIcon fontSize="large" />
-          <Typography component="h1" variant="h5">
-            {`Sign in to ${window.APP_CONFIG.APP_NAME}`}
-          </Typography>
-        </div>
-        <Paper className={classes.signInPaper}>
-          <Collapse className={classes.alert} in={signInError}>
-            <Alert severity="error">Incorrect email or password.</Alert>
-          </Collapse>
-          <Formik
-            initialValues={initialValues}
-            validationSchema={validationSchema}
-            onSubmit={signIn}
-          >
-            {({ isValid }) => {
-              return (
-                <Form className={classes.form}>
-                  <FormTextField
-                    label="Email Address"
-                    name="email"
-                    autoComplete="email"
-                  />
-                  <FormTextField
-                    label="Password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                  <Button
-                    type="submit"
-                    fullWidth
-                    variant="contained"
-                    className={classes.submit}
-                    color="primary"
-                    disabled={!isValid}
-                  >
-                    Sign in
+  const forgotPassword = async event => {
+    event.preventDefault();
+    await navigate('/app/forgotpassword');
+  };
+
+  return useObserver(() => (
+    <main className={classes.main}>
+      <div className={classes.pageTitle}>
+        <LocationCityIcon fontSize="large" />
+        <Typography component="h1" variant="h5">
+          {`Sign in to ${window.APP_CONFIG.APP_NAME}`}
+        </Typography>
+      </div>
+      <Paper className={classes.signInPaper}>
+        <Collapse className={classes.alert} in={!!store.error}>
+          <Alert severity="error">{store.error}</Alert>
+        </Collapse>
+        <Formik
+          initialValues={initialValues}
+          validationSchema={validationSchema}
+          onSubmit={signIn}
+        >
+          {({ isValid }) => {
+            return (
+              <Form className={classes.form}>
+                <FormTextField
+                  label="Email Address"
+                  name="email"
+                  autoComplete="email"
+                />
+                <FormTextField
+                  label="Password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                />
+                <Link href='#' className={classes.forgotPassword} onClick={forgotPassword}>Forgot password?</Link>
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  className={classes.submit}
+                  color="primary"
+                  disabled={!isValid}
+                >
+                  Sign in
                   </Button>
-                </Form>
-              )
-            }}
-          </Formik>
-        </Paper>
-        <Paper className={classes.signUpPaper}>
-          <div>
-            {`New to ${window.APP_CONFIG.APP_NAME}? `}
-            <Link href="#" onClick={signUp}>
-              Create an account
+              </Form>
+            )
+          }}
+        </Formik>
+      </Paper>
+      <Paper className={classes.signUpPaper}>
+        <div>
+          {`New to ${window.APP_CONFIG.APP_NAME}? `}
+          <Link href="#" onClick={signUp}>
+            Create an account
               </Link>
               .
             </div>
-        </Paper>
-      </main>
-  );
+      </Paper>
+    </main>
+  ));
 };
